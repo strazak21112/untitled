@@ -12,13 +12,13 @@ import pl.wiktor.koprowski.service.UserService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
 
-  //  @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/managers")
     public ResponseEntity<String> createManager(@RequestBody RegisterRequest request, @RequestParam String lang) {
         userService.createManager(request, lang);

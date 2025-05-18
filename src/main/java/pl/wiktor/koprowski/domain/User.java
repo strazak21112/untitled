@@ -42,6 +42,7 @@ public class User implements Serializable, UserDetails {
 
     @Column(nullable = false, unique = true)
     @Email
+
     private String email;
 
     @JsonManagedReference

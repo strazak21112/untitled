@@ -126,10 +126,7 @@ public class UserService {
         String activationLink = "http://localhost:3000/activate?token=" + activationTokenValue;
 
         emailService.sendMail(
-                newManager.getEmail(),
-                lang.equals("pl") ? "Kliknij poniższy link, aby aktywować swoje konto" :
-                        lang.equals("de") ? "Klicken Sie auf den folgenden Link, um Ihr Konto zu aktivieren" :
-                                "Click the link below to activate your account" + "\n" + activationLink,
+                newManager.getEmail(),activationLink,
                 lang.equals("pl") ? "Aktywacja konta" :
                         lang.equals("de") ? "Konto aktivieren" :
                                 "Account activation"

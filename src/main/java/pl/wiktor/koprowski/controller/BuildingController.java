@@ -22,7 +22,6 @@ public class BuildingController {
 
     private final BuildingService buildingService;
 
-    // Tworzenie nowego budynku (TYLKO ADMIN)
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> createBuilding(@Valid @RequestBody BuildingDTO buildingDTO) {
