@@ -1,8 +1,10 @@
 package pl.wiktor.koprowski.configuration;
 
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -30,6 +32,12 @@ public class SpringConfiguration implements WebMvcConfigurer {
     @Override
     public void addFormatters(FormatterRegistry formatterRegistry) {
     }
-
+    @Bean
+    public MessageSource messageSource() {
+        ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
+        messageSource.setBasename("classpath:i18n/messages"); // bez _pl - Spring automatycznie wybierze locale
+        messageSource.setDefaultEncoding("UTF-8"); // KLUCZOWA linijka
+        return messageSource;
+    }
 
 }

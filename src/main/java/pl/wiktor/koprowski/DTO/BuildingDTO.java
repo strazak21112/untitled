@@ -16,9 +16,9 @@ public class BuildingDTO {
 
     private Address address;
 
-    private List<Long> apartments;
+    private List<BuildingApartmentDto> apartments;
 
-    private List<Long> managers;
+    private List<BuildingManagerDto> managers;
 
     @DecimalMin(value = "0.01", message = "Electricity rate must be greater than 0")
     private double electricityRate;

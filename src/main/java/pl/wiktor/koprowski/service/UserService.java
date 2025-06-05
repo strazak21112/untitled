@@ -30,6 +30,7 @@ public class UserService {
     private final ActivationTokenRepository activationTokenRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final TranslationService translationService;
 
     @Autowired
     public UserService(ApartmentRepository apartmentRepository,
@@ -40,7 +41,7 @@ public class UserService {
                        PeselRepository peselRepository,
                        ActivationTokenRepository activationTokenRepository,
                        EmailService emailService,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder, TranslationService translationService) {
         this.apartmentRepository = apartmentRepository;
         this.buildingRepository = buildingRepository;
         this.userRepository = userRepository;
@@ -50,49 +51,25 @@ public class UserService {
         this.activationTokenRepository = activationTokenRepository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
+        this.translationService = translationService;
     }
 
     @Transactional
     public void createManager(RegisterRequest registerRequest, String lang) {
-        lang = lang.toLowerCase();
-
-        if (!lang.equals("pl") && !lang.equals("en") && !lang.equals("de")) {
-            throw new IllegalArgumentException(
-                    lang.equals("pl") ? "Nieprawidłowy język" :
-                            lang.equals("de") ? "Ungültige Sprache" : "Invalid language"
-            );
-        }
-
         if (userRepository.existsByEmail(registerRequest.getEmail()) || isAdminEmail(registerRequest.getEmail())) {
-            throw new IllegalArgumentException(
-                    lang.equals("pl") ? "Email jest już w użyciu" :
-                            lang.equals("de") ? "Email ist bereits in Gebrauch" :
-                                    "Email is already in use"
-            );
+            throw new IllegalArgumentException("error_email_in_use");
         }
 
         if (userRepository.existsByTelephone(registerRequest.getPhoneNumber())) {
-            throw new IllegalArgumentException(
-                    lang.equals("pl") ? "Numer telefonu jest już w użyciu" :
-                            lang.equals("de") ? "Telefonnummer ist bereits in Gebrauch" :
-                                    "Phone number is already in use"
-            );
+            throw new IllegalArgumentException("error_phone_in_use");
         }
 
         if (peselRepository.existsByPesel(registerRequest.getPesel())) {
-            throw new IllegalArgumentException(
-                    lang.equals("pl") ? "PESEL jest już w użyciu" :
-                            lang.equals("de") ? "PESEL wird bereits verwendet" :
-                                    "PESEL is already in use"
-            );
+            throw new IllegalArgumentException("error_pesel_in_use");
         }
 
         if (!Pesel.isValidPesel(registerRequest.getPesel())) {
-            throw new IllegalArgumentException(
-                    lang.equals("pl") ? "Nieprawidłowy numer PESEL" :
-                            lang.equals("de") ? "Ungültige PESEL-Nummer" :
-                                    "Invalid PESEL number"
-            );
+            throw new IllegalArgumentException("error_invalid_pesel");
         }
 
         User newManager = new User();
@@ -111,26 +88,22 @@ public class UserService {
         peselRepository.save(pesel);
 
         String activationTokenValue = UUID.randomUUID().toString();
-
         while (activationTokenRepository.existsByToken(activationTokenValue)) {
             activationTokenValue = UUID.randomUUID().toString();
         }
 
-        ActivationToken tokens = ActivationToken.builder()
+        ActivationToken token = ActivationToken.builder()
                 .token(activationTokenValue)
                 .user(newManager)
                 .used(false)
                 .build();
-        activationTokenRepository.save(tokens);
+        activationTokenRepository.save(token);
 
         String activationLink = "http://localhost:3000/activate?token=" + activationTokenValue;
+        String subject = translationService.getTranslation("email_activation_subject",lang);
+        String message = translationService.getTranslation("email_activation_body",lang) + "\n" + activationLink;
 
-        emailService.sendMail(
-                newManager.getEmail(),activationLink,
-                lang.equals("pl") ? "Aktywacja konta" :
-                        lang.equals("de") ? "Konto aktivieren" :
-                                "Account activation"
-        );
+        emailService.sendMail(newManager.getEmail(), message, subject);
     }
 
     public User loadUserByEmail(String email) {
@@ -181,13 +154,13 @@ public class UserService {
 
 
         if (user.getRole().equals("USER")) {
-            if (user.getApartment() != null && userDTO.getApartmentId() == null) {
+            if (user.getApartment() != null && userDTO.getApartment().getId() == null) {
                  Apartment oldApartment = user.getApartment();
                 oldApartment.setTenant(null);
                 apartmentRepository.save(oldApartment);
                 user.setApartment(null);
-            } else if (userDTO.getApartmentId() != null) {
-                 Apartment apartment = apartmentRepository.findById(userDTO.getApartmentId())
+            } else if (userDTO.getApartment().getId() != null) {
+                 Apartment apartment = apartmentRepository.findById(userDTO.getApartment().getId())
                         .orElseThrow(() -> new IllegalArgumentException(
                                 lang.equals("pl") ? "Apartament nie znaleziony" :
                                         lang.equals("de") ? "Wohnung nicht gefunden" : "Apartment not found"));
@@ -244,47 +217,11 @@ public class UserService {
     }
 
 
-    @Transactional
-    public UserDTO getUserById(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        return mapToUserDTO(user);
-    }
-
-     @Transactional
-    public List<UserDTO> getAllUsers() {
-        List<User> users = userRepository.findAll();
-
-        return users.stream()
-                .map(this::mapToUserDTO)
-                .collect(Collectors.toList());
-    }
-
-     private UserDTO mapToUserDTO(User user) {
-        return UserDTO.builder()
-                .id(user.getId())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .email(user.getEmail())
-                .telephone(user.getTelephone())
-                .role(user.getRole())
-                .enabled(user.isEnabled())
-                .apartmentId(user.getApartment() != null ? user.getApartment().getId() : null)
-                .managedBuildingIds(user.getManagedBuildings() != null ? user.getManagedBuildings().stream()
-                        .map(Building::getId)
-                        .collect(Collectors.toList()) : null)
-                .build();
-    }
-
-
 
     @Transactional
-    public void deleteUser(Long userId, String lang) {
+    public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        lang.equals("pl") ? "Użytkownik nie znaleziony" :
-                                lang.equals("de") ? "Benutzer nicht gefunden" : "User not found"));
+                .orElseThrow(() -> new IllegalArgumentException("error_user_not_found"));
 
         if (user.getApartment() != null) {
             user.getApartment().setTenant(null);
@@ -306,7 +243,6 @@ public class UserService {
             }
             invoiceRepository.delete(invoice);
         }
-
 
         userRepository.delete(user);
     }

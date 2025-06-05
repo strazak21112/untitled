@@ -8,6 +8,8 @@ import java.util.List;
 @Data
 public class ApartmentDTO {
 
+    private Long id;
+
     @NotBlank(message = "Apartment number cannot be blank")
     private String number;
 
@@ -17,10 +19,7 @@ public class ApartmentDTO {
     @Min(value = 0, message = "Floor must be 0 or higher")
     private int floor;
 
-    private Long buildingId;
+    private BuildingInfoDTO buildingInfo;
 
-    private Long tenantId;
-
-    private List<Long> readingIds;
-
+    private ApartmentTeenantDto tenant;
  }

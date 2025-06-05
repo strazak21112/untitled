@@ -29,12 +29,11 @@ public class TranslationController {
 
     @GetMapping
     public ResponseEntity<Map<String, String>> getTranslations(
-            @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, defaultValue = "en") String language) {
+            @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, defaultValue = "pl") String language) {
         Map<String, String> response = new HashMap<>();
 
         try {
-            // Obsługiwane języki: angielski i niemiecki
-            if (!"en".equalsIgnoreCase(language) && !"de".equalsIgnoreCase(language)) {
+             if (!"en".equalsIgnoreCase(language) && !"de".equalsIgnoreCase(language)) {
                 response.put("status", "error");
                 response.put("message", "Unsupported language. Supported languages are: en, de.");
                 return ResponseEntity.badRequest()
@@ -42,8 +41,7 @@ public class TranslationController {
                         .body(response);
             }
 
-            // Pobieranie tłumaczeń z serwisu
-            Map<String, String> translations = translationService.getTranslations(language);
+             Map<String, String> translations = translationService.getTranslations(language);
             response.put("status", "success");
             response.putAll(translations);
 
@@ -51,8 +49,7 @@ public class TranslationController {
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(response);
         } catch (Exception e) {
-            // Obsługa błędów
-            response.put("status", "error");
+             response.put("status", "error");
             response.put("message", "An unexpected error occurred");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .contentType(MediaType.APPLICATION_JSON)

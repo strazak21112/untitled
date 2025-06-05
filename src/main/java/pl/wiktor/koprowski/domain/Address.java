@@ -31,4 +31,27 @@ public class Address {
 		return street + " " + number + ", " + postalCode + " " + city;
 	}
 
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (!(o instanceof Address)) return false;
+
+		Address address = (Address) o;
+
+		return city.equalsIgnoreCase(address.city)
+				&& street.equalsIgnoreCase(address.street)
+				&& number.equalsIgnoreCase(address.number)
+				&& postalCode.equals(address.postalCode);
+	}
+
+	@Override
+	public int hashCode() {
+		int result = city.toLowerCase().hashCode();
+		result = 31 * result + street.toLowerCase().hashCode();
+		result = 31 * result + number.toLowerCase().hashCode();
+		result = 31 * result + postalCode.hashCode();
+		return result;
+	}
+
 }

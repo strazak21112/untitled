@@ -24,7 +24,7 @@ public class UserDTO {
 
     private String pesel;
 
-    private Long apartmentId;
+    private ApartmentDTO apartment;
 
-    private List<Long> managedBuildingIds;
+    private List<BuildingInfoDTO> managedBuilding;
 }
