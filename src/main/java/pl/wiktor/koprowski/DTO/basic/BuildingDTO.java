@@ -1,8 +1,10 @@
-package pl.wiktor.koprowski.DTO;
+package pl.wiktor.koprowski.DTO.basic;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import lombok.*;
+import pl.wiktor.koprowski.DTO.inside.BuildingApartmentDto;
+import pl.wiktor.koprowski.DTO.inside.BuildingManagerDto;
 import pl.wiktor.koprowski.domain.Address;
 
 import java.util.List;

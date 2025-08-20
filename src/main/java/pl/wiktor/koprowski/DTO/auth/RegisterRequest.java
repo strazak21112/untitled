@@ -1,4 +1,4 @@
-package pl.wiktor.koprowski.DTO;
+package pl.wiktor.koprowski.DTO.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

@@ -1,9 +1,9 @@
-package pl.wiktor.koprowski.service;
+package pl.wiktor.koprowski.service.basic;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pl.wiktor.koprowski.DTO.ReadingDTO;
+import pl.wiktor.koprowski.DTO.basic.ReadingDTO;
 import pl.wiktor.koprowski.domain.Invoice;
 import pl.wiktor.koprowski.domain.Reading;
 import pl.wiktor.koprowski.domain.Apartment;
@@ -11,7 +11,6 @@ import pl.wiktor.koprowski.repository.InvoiceRepository;
 import pl.wiktor.koprowski.repository.ReadingRepository;
 import pl.wiktor.koprowski.repository.ApartmentRepository;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,43 +21,21 @@ public class ReadingService {
     private final ReadingRepository readingRepository;
     private final ApartmentRepository apartmentRepository;
     private final InvoiceRepository invoiceRepository;
-    @Transactional
-    public Reading createReading(ReadingDTO readingDTO, String lang) {
-        lang = lang.toLowerCase();
 
-        // Walidacja języka
-        if (!lang.equals("pl") && !lang.equals("en") && !lang.equals("de")) {
-            throw new IllegalArgumentException(
-                    lang.equals("pl") ? "Nieprawidłowy język" :
-                            lang.equals("de") ? "Ungültige Sprache" :
-                                    "Invalid language"
-            );
-        }
-
-        // Pobieranie mieszkania na podstawie ID
-        String finalLang = lang;
+     @Transactional
+    public Reading createReading(ReadingDTO readingDTO) {
         Apartment apartment = apartmentRepository.findById(readingDTO.getApartmentId())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        finalLang.equals("pl") ? "Mieszkanie nie znalezione" :
-                                finalLang.equals("de") ? "Wohnung nicht gefunden" :
-                                        "Apartment not found"
-                ));
+                .orElseThrow(() -> new RuntimeException("error_apartment_not_found"));
 
-        // Sprawdzanie, czy istnieje odczyt w tym samym okresie rozliczeniowym dla tego samego mieszkania
         boolean exists = readingRepository.existsByApartmentAndBillingStartDateAndBillingEndDate(
                 apartment,
                 readingDTO.getBillingStartDate(),
                 readingDTO.getBillingEndDate()
         );
         if (exists) {
-            throw new IllegalArgumentException(
-                    lang.equals("pl") ? "Odczyt dla tego mieszkania w tym okresie już istnieje" :
-                            lang.equals("de") ? "Für diese Wohnung existiert bereits eine Ablesung in diesem Zeitraum" :
-                                    "A reading for this apartment already exists in this period"
-            );
+            throw new RuntimeException("error_reading_already_exists");
         }
 
-        // Tworzenie nowego odczytu
         Reading reading = new Reading();
         reading.setColdWaterValue(readingDTO.getColdWaterValue());
         reading.setHotWaterValue(readingDTO.getHotWaterValue());
@@ -69,21 +46,8 @@ public class ReadingService {
         reading.setBillingEndDate(readingDTO.getBillingEndDate());
         reading.setApartment(apartment);
 
-        // Zapisanie nowego odczytu w repozytorium
         return readingRepository.save(reading);
     }
-
-
-
-    public Optional<Reading> getReadingById(Long id) {
-        return readingRepository.findById(id);
-    }
-
-
-    public List<Reading> getAllReadings() {
-        return readingRepository.findAll();
-    }
-
 
     @Transactional
     public Reading updateReading(Long id, ReadingDTO readingDTO, String lang) {

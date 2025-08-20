@@ -1,12 +1,13 @@
-package pl.wiktor.koprowski.service;
+package pl.wiktor.koprowski.service.basic;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pl.wiktor.koprowski.DTO.BuildingApartmentDto;
-import pl.wiktor.koprowski.DTO.BuildingDTO;
-import pl.wiktor.koprowski.DTO.BuildingManagerDto;
-import pl.wiktor.koprowski.DTO.BuildingRowDTO;
+import pl.wiktor.koprowski.DTO.inside.BuildingApartmentDto;
+import pl.wiktor.koprowski.DTO.basic.BuildingDTO;
+import pl.wiktor.koprowski.DTO.inside.BuildingInfoDTO;
+import pl.wiktor.koprowski.DTO.inside.BuildingManagerDto;
+import pl.wiktor.koprowski.DTO.row.BuildingRowDTO;
 import pl.wiktor.koprowski.domain.Apartment;
 import pl.wiktor.koprowski.domain.Building;
 import pl.wiktor.koprowski.domain.User;
@@ -46,17 +47,6 @@ public class BuildingService {
         );
         return buildingRepository.save(building);
     }
-
-
-    public Building getBuildingById(Long id) {
-        return buildingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("error_building_not_found"));
-    }
-
-    public List<Building> getAllBuildings() {
-        return buildingRepository.findAll();
-    }
-
     public List<BuildingRowDTO> getAllBuildingRows() {
         return buildingRepository.findAll().stream()
                 .map(building -> {
@@ -152,4 +142,15 @@ public class BuildingService {
 
         buildingRepository.delete(building);
     }
+
+    public List<BuildingInfoDTO> getAllBuildingInfo() {
+        return buildingRepository.findAll().stream()
+                .filter(building -> building.getManagers() != null && !building.getManagers().isEmpty())
+                .map(building -> new BuildingInfoDTO(building.getId(), building.getAddress()))
+                .collect(Collectors.toList());
+    }
+
+
+
+
 }

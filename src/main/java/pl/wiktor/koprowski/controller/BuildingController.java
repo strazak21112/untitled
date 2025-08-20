@@ -3,13 +3,16 @@ package pl.wiktor.koprowski.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import pl.wiktor.koprowski.DTO.BuildingDTO;
-import pl.wiktor.koprowski.DTO.BuildingRowDTO;
+import pl.wiktor.koprowski.DTO.basic.BuildingDTO;
+import pl.wiktor.koprowski.DTO.inside.BuildingInfoDTO;
+import pl.wiktor.koprowski.DTO.row.BuildingRowDTO;
 import pl.wiktor.koprowski.domain.Building;
-import pl.wiktor.koprowski.service.BuildingService;
+import pl.wiktor.koprowski.service.basic.BuildingService;
+import pl.wiktor.koprowski.service.TranslationService;
 
 import java.util.HashMap;
 import java.util.List;
@@ -21,8 +24,9 @@ import java.util.Map;
 public class BuildingController {
 
     private final BuildingService buildingService;
+    private final TranslationService translationService;
 
-    @PostMapping
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> createBuilding(@Valid @RequestBody BuildingDTO buildingDTO,
                                                               @RequestParam("lang") String lang) {
@@ -30,31 +34,11 @@ public class BuildingController {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
         response.put("buildingId", building.getId());
+        response.put("message", translationService.getTranslation("building_created_success", lang));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> getBuildingById(@PathVariable Long id,
-                                                               @RequestParam("lang") String lang) {
-        Building building = buildingService.getBuildingById(id);
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("data", building);
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> getAllBuildings(@RequestParam("lang") String lang) {
-        List<Building> buildings = buildingService.getAllBuildings();
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("data", buildings);
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/rows")
+    @GetMapping(value = "/rows", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getAllBuildingRows(@RequestParam("lang") String lang) {
         List<BuildingRowDTO> buildingRows = buildingService.getAllBuildingRows();
@@ -64,7 +48,7 @@ public class BuildingController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}/details")
+    @GetMapping(value = "/{id}/details", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getBuildingDetails(@PathVariable Long id,
                                                                   @RequestParam("lang") String lang) {
@@ -75,7 +59,7 @@ public class BuildingController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> updateBuilding(@PathVariable Long id,
                                                               @Valid @RequestBody BuildingDTO buildingDTO,
@@ -84,14 +68,29 @@ public class BuildingController {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
         response.put("buildingId", updatedBuilding.getId());
+        response.put("message", translationService.getTranslation("building_updated_success", lang));
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteBuilding(@PathVariable Long id,
-                                               @RequestParam("lang") String lang) {
+    public ResponseEntity<Map<String, Object>> deleteBuilding(@PathVariable Long id,
+                                                              @RequestParam("lang") String lang) {
         buildingService.deleteBuilding(id);
-        return ResponseEntity.noContent().build();
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", translationService.getTranslation("building_deleted_success", lang));
+        return ResponseEntity.ok(response);
     }
+
+    @GetMapping(value = "/info", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> getAllBuildingInfo(@RequestParam("lang") String lang) {
+        List<BuildingInfoDTO> buildingInfos = buildingService.getAllBuildingInfo();
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("data", buildingInfos);
+        return ResponseEntity.ok(response);
+    }
+
 }

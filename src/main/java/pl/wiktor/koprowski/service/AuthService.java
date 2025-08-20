@@ -3,9 +3,9 @@ package pl.wiktor.koprowski.service;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pl.wiktor.koprowski.DTO.AdminCredentials;
-import pl.wiktor.koprowski.DTO.RegisterRequest;
-import pl.wiktor.koprowski.DTO.UserCredentials;
+import pl.wiktor.koprowski.DTO.auth.AdminCredentials;
+import pl.wiktor.koprowski.DTO.auth.RegisterRequest;
+import pl.wiktor.koprowski.DTO.auth.UserCredentials;
 import pl.wiktor.koprowski.domain.ActivationToken;
 import pl.wiktor.koprowski.domain.Pesel;
 import pl.wiktor.koprowski.domain.User;
@@ -136,7 +136,6 @@ public class AuthService {
         String token = jwtUtilities.generateToken(user.getUsername(), user.getRole());
 
         Map<String, String> response = new HashMap<>();
-        response.put("status", "success");
         response.put("token", token);
         response.put("role", user.getRole());
         response.put("username", user.getUsername());

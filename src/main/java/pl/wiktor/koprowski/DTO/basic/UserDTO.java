@@ -1,9 +1,10 @@
-package pl.wiktor.koprowski.DTO;
+package pl.wiktor.koprowski.DTO.basic;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import pl.wiktor.koprowski.DTO.inside.BuildingInfoDTO;
 
 import java.util.List;
 

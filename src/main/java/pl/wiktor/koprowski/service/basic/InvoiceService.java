@@ -1,19 +1,17 @@
-package pl.wiktor.koprowski.service;
+package pl.wiktor.koprowski.service.basic;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pl.wiktor.koprowski.DTO.InvoiceDTO;
+import pl.wiktor.koprowski.DTO.basic.InvoiceDTO;
 import pl.wiktor.koprowski.domain.*;
 import pl.wiktor.koprowski.repository.ApartmentRepository;
 import pl.wiktor.koprowski.repository.InvoiceRepository;
 import pl.wiktor.koprowski.repository.UserRepository;
 import pl.wiktor.koprowski.repository.ReadingRepository;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor

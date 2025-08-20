@@ -1,9 +1,10 @@
-package pl.wiktor.koprowski.DTO;
+package pl.wiktor.koprowski.DTO.basic;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
-import java.util.List;
+import pl.wiktor.koprowski.DTO.inside.ApartmentTenantDto;
+import pl.wiktor.koprowski.DTO.inside.BuildingInfoDTO;
 
 @Data
 public class ApartmentDTO {
@@ -21,5 +22,5 @@ public class ApartmentDTO {
 
     private BuildingInfoDTO buildingInfo;
 
-    private ApartmentTeenantDto tenant;
+    private ApartmentTenantDto tenant;
  }

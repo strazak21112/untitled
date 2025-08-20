@@ -3,9 +3,9 @@ package pl.wiktor.koprowski.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import pl.wiktor.koprowski.DTO.AdminCredentials;
-import pl.wiktor.koprowski.DTO.RegisterRequest;
-import pl.wiktor.koprowski.DTO.UserCredentials;
+import pl.wiktor.koprowski.DTO.auth.AdminCredentials;
+import pl.wiktor.koprowski.DTO.auth.RegisterRequest;
+import pl.wiktor.koprowski.DTO.auth.UserCredentials;
 import pl.wiktor.koprowski.service.AuthService;
 import pl.wiktor.koprowski.service.ReCaptchaService;
 import pl.wiktor.koprowski.service.TranslationService;
@@ -58,10 +58,12 @@ public class AuthController {
 
         Map<String, String> successResponse = new HashMap<>();
         successResponse.put("status", "success");
-         return ResponseEntity.ok()
+        successResponse.put("message", translationService.getTranslation("registration_success", lang)); // Dodany komunikat
+        return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(successResponse);
     }
+
 
     @PostMapping("/activate")
     public ResponseEntity<Map<String, String>> activateAccount(@RequestBody Map<String, String> request,
@@ -71,10 +73,12 @@ public class AuthController {
 
         Map<String, String> response = new HashMap<>();
         response.put("status", "success");
-         return ResponseEntity.ok()
+        response.put("message", translationService.getTranslation("account_activated", lang));
+        return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(response);
     }
+
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> loginUser(@RequestBody UserCredentials userCredentials,

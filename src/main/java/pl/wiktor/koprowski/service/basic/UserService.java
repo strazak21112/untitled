@@ -1,16 +1,19 @@
-package pl.wiktor.koprowski.service;
+package pl.wiktor.koprowski.service.basic;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import pl.wiktor.koprowski.DTO.RegisterRequest;
-import pl.wiktor.koprowski.DTO.UserDTO;
+import pl.wiktor.koprowski.DTO.auth.RegisterRequest;
+import pl.wiktor.koprowski.DTO.basic.ApartmentDTO;
+import pl.wiktor.koprowski.DTO.basic.UserDTO;
+import pl.wiktor.koprowski.DTO.inside.BuildingInfoDTO;
+import pl.wiktor.koprowski.DTO.row.UserRowDTO;
 import pl.wiktor.koprowski.domain.*;
 import pl.wiktor.koprowski.repository.*;
+import pl.wiktor.koprowski.service.EmailService;
+import pl.wiktor.koprowski.service.TranslationService;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -136,67 +139,63 @@ public class UserService {
 
 
     @Transactional
-    public void updateUser(UserDTO userDTO, String lang) {
+    public void updateUser(UserDTO userDTO) {
         User user = userRepository.findById(userDTO.getId())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        lang.equals("pl") ? "Użytkownik nie znaleziony" :
-                                lang.equals("de") ? "Benutzer nicht gefunden" : "User not found"));
+                .orElseThrow(() -> new IllegalArgumentException("error_user_not_found"));
 
-        if (userRepository.existsByTelephone(userDTO.getTelephone()) && !user.getTelephone().equals(userDTO.getTelephone())) {
-            throw new IllegalArgumentException(
-                    lang.equals("pl") ? "Numer telefonu jest już w użyciu" :
-                            lang.equals("de") ? "Telefonnummer ist bereits in Gebrauch" : "Phone number is already in use");
+        if (userRepository.existsByTelephone(userDTO.getTelephone()) &&
+                !user.getTelephone().equals(userDTO.getTelephone())) {
+            throw new IllegalArgumentException("error_phone_in_use");
         }
 
         user.setFirstName(userDTO.getFirstName());
         user.setLastName(userDTO.getLastName());
         user.setTelephone(userDTO.getTelephone());
 
+        if ("USER".equals(user.getRole())) {
+            Long newApartmentId = userDTO.getApartment() != null ? userDTO.getApartment().getId() : null;
+            Apartment currentApartment = user.getApartment();
 
-        if (user.getRole().equals("USER")) {
-            if (user.getApartment() != null && userDTO.getApartment().getId() == null) {
-                 Apartment oldApartment = user.getApartment();
-                oldApartment.setTenant(null);
-                apartmentRepository.save(oldApartment);
-                user.setApartment(null);
-            } else if (userDTO.getApartment().getId() != null) {
-                 Apartment apartment = apartmentRepository.findById(userDTO.getApartment().getId())
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                lang.equals("pl") ? "Apartament nie znaleziony" :
-                                        lang.equals("de") ? "Wohnung nicht gefunden" : "Apartment not found"));
+            if (newApartmentId == null) {
+                if (currentApartment != null) {
+                    currentApartment.setTenant(null);
+                    user.setApartment(null);
+                    apartmentRepository.save(currentApartment);
+                }
+            } else {
+                if (currentApartment == null) {
 
-                if (!apartment.equals(user.getApartment())) {
-                     if (apartment.getTenant() != null) {
-                        throw new IllegalArgumentException(
-                                lang.equals("pl") ? "Ten apartament jest już zajęty" :
-                                        lang.equals("de") ? "Diese Wohnung ist bereits belegt" : "This apartment is already occupied");
-                    }
+                    Apartment newApartment = apartmentRepository.findById(newApartmentId)
+                            .orElseThrow(() -> new IllegalArgumentException("error_apartment_not_found"));
 
-                     if (user.getApartment() != null) {
-                        Apartment oldApartment = user.getApartment();
-                        oldApartment.setTenant(null);
-                        apartmentRepository.save(oldApartment);
-                    }
-                     apartment.setTenant(user);
-                    user.setApartment(apartment);
-                    apartmentRepository.save(apartment);
+                    newApartment.setTenant(user);
+                    user.setApartment(newApartment);
+                    apartmentRepository.save(newApartment);
                 }
             }
-        } else {
-            throw new IllegalArgumentException(
-                    lang.equals("pl") ? "Tylko najemcy mogą być przypisani do apartamentu" :
-                            lang.equals("de") ? "Nur Mieter können einer Wohnung zugewiesen werden" : "Only tenants can be assigned to an apartment");
         }
-
-
-        if ("MANAGER".equals(user.getRole())) {
+        else if ("MANAGER".equals(user.getRole())) {
             List<Building> currentBuildings = new ArrayList<>(user.getManagedBuildings());
-            List<Building> newBuildings = userDTO.getManagedBuildingIds() != null
-                    ? buildingRepository.findAllById(userDTO.getManagedBuildingIds())
+
+             List<Long> newBuildingIds = userDTO.getManagedBuilding() != null
+                    ? userDTO.getManagedBuilding().stream()
+                    .map(BuildingInfoDTO::getId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList())
                     : new ArrayList<>();
+
+            List<Building> newBuildings = buildingRepository.findAllById(newBuildingIds);
+
+             if (newBuildings.size() != newBuildingIds.size()) {
+                throw new IllegalArgumentException("error_some_buildings_not_found");
+            }
 
              for (Building oldBuilding : currentBuildings) {
                 if (!newBuildings.contains(oldBuilding)) {
+                    if (oldBuilding.getManagers().size() == 1 && oldBuilding.getManagers().contains(user)) {
+                        throw new IllegalArgumentException("error_building_needs_at_least_one_manager");
+                    }
                     oldBuilding.getManagers().remove(user);
                     buildingRepository.save(oldBuilding);
                 }
@@ -218,10 +217,81 @@ public class UserService {
 
 
 
+
+    @Transactional(readOnly = true)
+    public UserDTO getUserDetails(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("error_user_not_found"));
+
+        UserDTO dto = new UserDTO();
+        dto.setId(user.getId());
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
+        dto.setTelephone(user.getTelephone());
+        dto.setEmail(user.getEmail());
+        dto.setRole(user.getRole());
+        dto.setEnabled(user.isEnabled());
+
+        if (user.getPesel() != null) {
+            dto.setPesel(user.getPesel().getPesel());
+        }
+
+        if (user.getApartment() != null) {
+            Apartment apartment = user.getApartment();
+            ApartmentDTO apartmentDTO = new ApartmentDTO();
+            apartmentDTO.setId(apartment.getId());
+            apartmentDTO.setNumber(apartment.getNumber());
+            apartmentDTO.setArea(apartment.getArea());
+            apartmentDTO.setFloor(apartment.getFloor());
+
+            Building building = apartment.getBuilding();
+
+            BuildingInfoDTO buildingInfoDTO = new BuildingInfoDTO();
+            buildingInfoDTO.setId(building.getId());
+            buildingInfoDTO.setAddress(building.getAddress());
+            apartmentDTO.setBuildingInfo(buildingInfoDTO);
+
+            dto.setApartment(apartmentDTO);
+        }
+
+        if (user.getManagedBuildings() != null && !user.getManagedBuildings().isEmpty()) {
+            List<BuildingInfoDTO> buildingDTOs = user.getManagedBuildings().stream()
+                    .map(building -> {
+                        BuildingInfoDTO bDTO = new BuildingInfoDTO();
+                        bDTO.setId(building.getId());
+                        bDTO.setAddress(building.getAddress());
+                        return bDTO;
+                    })
+                    .collect(Collectors.toList());
+            dto.setManagedBuilding(buildingDTOs);
+        }
+
+
+        return dto;
+    }
+
+    public List<UserRowDTO> getAllUserRows() {
+        return userRepository.findAll().stream()
+                .map(user -> {
+                    UserRowDTO dto = new UserRowDTO();
+                    dto.setId(user.getId());
+                    dto.setEmail(user.getEmail());
+                    dto.setRole(user.getRole());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("error_user_not_found"));
+
+        for (Building building : user.getManagedBuildings()) {
+            if (building.getManagers().size() == 1 && building.getManagers().contains(user)) {
+                throw new IllegalArgumentException("error_building_needs_at_least_one_manager");
+            }
+        }
 
         if (user.getApartment() != null) {
             user.getApartment().setTenant(null);
@@ -235,18 +305,16 @@ public class UserService {
 
         Set<Invoice> invoices = invoiceRepository.findByTenant(user);
         for (Invoice invoice : invoices) {
-            Optional<Reading> readingOptional = readingRepository.findByInvoice(invoice);
-            if (readingOptional.isPresent()) {
-                Reading reading = readingOptional.get();
-                reading.setInvoice(null);
-                readingRepository.save(reading);
-            }
-            invoiceRepository.delete(invoice);
+            invoice.setTenant(null);
+            invoiceRepository.save(invoice);
+        }
+
+        if (user.getPesel() != null) {
+            user.setPesel(null);
         }
 
         userRepository.delete(user);
     }
-
 
 
 }

@@ -5,9 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import pl.wiktor.koprowski.DTO.InvoiceDTO;
+import pl.wiktor.koprowski.DTO.basic.InvoiceDTO;
 import pl.wiktor.koprowski.domain.Invoice;
-import pl.wiktor.koprowski.service.InvoiceService;
+import pl.wiktor.koprowski.service.basic.InvoiceService;
 
 import java.util.List;
 import java.util.Optional;

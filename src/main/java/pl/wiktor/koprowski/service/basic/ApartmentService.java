@@ -1,19 +1,20 @@
-package pl.wiktor.koprowski.service;
+package pl.wiktor.koprowski.service.basic;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pl.wiktor.koprowski.DTO.ApartmentDTO;
-import pl.wiktor.koprowski.DTO.ApartmentRowDTO;
-import pl.wiktor.koprowski.DTO.ApartmentTeenantDto;
-import pl.wiktor.koprowski.DTO.BuildingInfoDTO;
+import pl.wiktor.koprowski.DTO.basic.ApartmentDTO;
+import pl.wiktor.koprowski.DTO.inside.AvailableApartment;
+import pl.wiktor.koprowski.DTO.row.ApartmentRowDTO;
+import pl.wiktor.koprowski.DTO.inside.ApartmentTenantDto;
+import pl.wiktor.koprowski.DTO.inside.BuildingInfoDTO;
 import pl.wiktor.koprowski.domain.*;
 import pl.wiktor.koprowski.repository.*;
+import pl.wiktor.koprowski.service.TranslationService;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -52,18 +53,6 @@ public class ApartmentService {
         return apartmentRepository.save(apartment);
     }
 
-
-
-    public Optional<Apartment> getApartmentById(Long id) {
-        return apartmentRepository.findById(id);
-    }
-
-    public List<Apartment> getAllApartments() {
-        return apartmentRepository.findAll();
-    }
-
-
-
     public ApartmentDTO getApartmentDetails(Long id) {
         Apartment apartment = apartmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("error_apartment_not_found"));
@@ -82,7 +71,7 @@ public class ApartmentService {
 
          User tenant = apartment.getTenant();
         if (tenant != null) {
-            ApartmentTeenantDto tenantDto = new ApartmentTeenantDto();
+            ApartmentTenantDto tenantDto = new ApartmentTenantDto();
             tenantDto.setId(tenant.getId());
             tenantDto.setFirstName(tenant.getFirstName());
             tenantDto.setLastName(tenant.getLastName());
@@ -133,7 +122,6 @@ public class ApartmentService {
             tenant.setApartment(null);
             userRepository.save(tenant);
         }
-
          Building building = apartment.getBuilding();
         if (building != null) {
             building.getApartments().remove(apartment);
@@ -149,6 +137,8 @@ public class ApartmentService {
                     invoicesToUpdate.add(reading.getInvoice());
                 }
             }
+            //zmienic niezatwierdzonym fakturą na ryczałt przy zatwierdzonych zostają kwoty i  pomiary.
+            //Przy zmianie rycząłtu bad stawek dla budynku to przy zatwierdzonym nic sie nie zmienia.
             if (!invoicesToUpdate.isEmpty()) {
                 invoiceRepository.saveAll(invoicesToUpdate);
             }
@@ -156,6 +146,19 @@ public class ApartmentService {
         }
 
         apartmentRepository.delete(apartment);
+    }
+
+
+    public List<AvailableApartment> getAvailableApartments() {
+        return apartmentRepository.findByTenantIsNull()
+                .stream()
+                .map(apartment -> new AvailableApartment(
+                        apartment.getId(),
+                        apartment.getFloor(),
+                        apartment.getNumber(),
+                        apartment.getBuilding().getAddress()
+                ))
+                .collect(Collectors.toList());
     }
 
 }

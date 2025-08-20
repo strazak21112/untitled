@@ -46,7 +46,7 @@ public class User implements Serializable, UserDetails {
     private String email;
 
     @JsonManagedReference
-    @OneToOne(cascade = CascadeType.ALL, mappedBy = "user")
+    @OneToOne(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)
     private Pesel pesel;
 
 

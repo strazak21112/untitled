@@ -57,6 +57,6 @@ public class Invoice {
 
      @Column(nullable = false)
     boolean confirmed = false;
-
+    @Embedded
     InvoiceInfo info;
 }

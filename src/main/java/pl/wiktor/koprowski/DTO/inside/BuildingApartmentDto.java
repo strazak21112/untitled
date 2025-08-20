@@ -1,4 +1,4 @@
-package pl.wiktor.koprowski.DTO;
+package pl.wiktor.koprowski.DTO.inside;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,8 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ApartmentTeenantDto {
+public class BuildingApartmentDto {
     private Long id;
-    private String firstName;
-    private String lastName;
+    private int floor;
+    private String number;
 }

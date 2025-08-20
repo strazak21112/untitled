@@ -1,4 +1,4 @@
-package pl.wiktor.koprowski.DTO;
+package pl.wiktor.koprowski.DTO.basic;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;

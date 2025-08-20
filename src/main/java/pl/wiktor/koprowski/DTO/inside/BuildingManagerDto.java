@@ -1,4 +1,4 @@
-package pl.wiktor.koprowski.DTO;
+package pl.wiktor.koprowski.DTO.inside;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -5,9 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import pl.wiktor.koprowski.DTO.ReadingDTO;
+import pl.wiktor.koprowski.DTO.basic.ReadingDTO;
 import pl.wiktor.koprowski.domain.Reading;
-import pl.wiktor.koprowski.service.ReadingService;
+import pl.wiktor.koprowski.service.basic.ReadingService;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,34 +23,14 @@ public class ReadingController {
     public ResponseEntity<?> createReading(@Valid @RequestBody ReadingDTO readingDTO,
                                            @RequestParam(defaultValue = "en") String lang) {
         try {
-            Reading reading = readingService.createReading(readingDTO, lang);
+            Reading reading = readingService.createReading(readingDTO);
             return ResponseEntity.status(HttpStatus.CREATED).body(reading);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getReadingById(@PathVariable Long id,
-                                            @RequestParam(defaultValue = "en") String lang) {
-        Optional<Reading> reading = readingService.getReadingById(id);
-        if (reading.isPresent()) {
-            return ResponseEntity.ok(reading.get());
-        } else {
-            String message = lang.equals("pl") ? "Odczyt nie znaleziony" :
-                    lang.equals("de") ? "Ablesung nicht gefunden" :
-                            "Reading not found";
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(message);
-        }
-    }
 
-
-    @GetMapping
-    public ResponseEntity<List<Reading>> getAllReadings() {
-        List<Reading> readings = readingService.getAllReadings();
-        return readings.isEmpty() ? ResponseEntity.status(HttpStatus.NO_CONTENT).build()
-                : ResponseEntity.ok(readings);
-    }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateReading(@PathVariable Long id,
