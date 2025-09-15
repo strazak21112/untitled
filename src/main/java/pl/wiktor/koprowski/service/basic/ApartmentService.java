@@ -12,6 +12,8 @@ import pl.wiktor.koprowski.domain.*;
 import pl.wiktor.koprowski.repository.*;
 import pl.wiktor.koprowski.service.TranslationService;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +28,6 @@ public class ApartmentService {
     private final UserRepository userRepository;
     private final InvoiceRepository invoiceRepository;
     private final ReadingRepository readingRepository;
-    private final TranslationService translationService;
 
     @Transactional
     public Apartment createApartment(ApartmentDTO apartmentDTO) {
@@ -100,47 +101,91 @@ public class ApartmentService {
 
         Building building = apartment.getBuilding();
 
-         boolean apartmentExists = building.getApartments().stream()
+        boolean apartmentExists = building.getApartments().stream()
                 .anyMatch(a -> !a.getId().equals(id) && a.getNumber().equals(apartmentDTO.getNumber()));
         if (apartmentExists) {
             throw new RuntimeException("error_apartment_number_exists");
         }
 
-         apartment.setNumber(apartmentDTO.getNumber());
+        apartment.setNumber(apartmentDTO.getNumber());
         apartment.setArea(apartmentDTO.getArea());
 
-        return apartmentRepository.save(apartment);
+        Apartment updatedApartment = apartmentRepository.save(apartment);
+
+        List<Invoice> invoices = invoiceRepository.findByApartmentAndConfirmedFalse(apartment);
+
+        for (Invoice invoice : invoices) {
+            invoice.setRentAmount(round2(updatedApartment.getArea() * building.getRentRatePerM2()));
+            invoice.setOtherCharges(round2(updatedApartment.getArea() * building.getOtherChargesPerM2()));
+
+            invoice.setTotalAmount(round2(invoice.getTotalMediaAmount() + invoice.getRentAmount() + invoice.getOtherCharges()));
+
+            InvoiceInfo info = invoice.getInfo();
+            info.setApartmentNumber(updatedApartment.getNumber());
+            info.setApartmentArea(updatedApartment.getArea());
+
+            invoice.setInfo(info);
+        }
+
+        if (!invoices.isEmpty()) {
+            invoiceRepository.saveAll(invoices);
+        }
+
+        return updatedApartment;
     }
+
+     private double round2(double value) {
+        return BigDecimal.valueOf(value)
+                .setScale(2, RoundingMode.HALF_UP)
+                .doubleValue();
+    }
+
 
     @Transactional
     public void deleteApartment(Long id) {
         Apartment apartment = apartmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("error_apartment_not_found"));
 
-         User tenant = apartment.getTenant();
+        User tenant = apartment.getTenant();
         if (tenant != null) {
             tenant.setApartment(null);
             userRepository.save(tenant);
         }
-         Building building = apartment.getBuilding();
+
+        Building building = apartment.getBuilding();
         if (building != null) {
             building.getApartments().remove(apartment);
             buildingRepository.save(building);
         }
 
-         List<Reading> readings = apartment.getReadings();
+        List<Invoice> invoices = invoiceRepository.findByApartment(apartment);
+
+        List<Invoice> toDelete = new ArrayList<>();
+        List<Invoice> toUpdate = new ArrayList<>();
+
+        for (Invoice invoice : invoices) {
+            if (invoice.isConfirmed()) {
+                invoice.setApartment(null);
+                toUpdate.add(invoice);
+            } else {
+                toDelete.add(invoice);
+            }
+        }
+
+        if (!toUpdate.isEmpty()) {
+            invoiceRepository.saveAll(toUpdate);
+        }
+        if (!toDelete.isEmpty()) {
+            invoiceRepository.deleteAll(toDelete);
+        }
+
+        List<Reading> readings = apartment.getReadings();
         if (readings != null && !readings.isEmpty()) {
-            List<Invoice> invoicesToUpdate = new ArrayList<>();
             for (Reading reading : readings) {
                 if (reading.getInvoice() != null) {
                     reading.getInvoice().setReading(null);
-                    invoicesToUpdate.add(reading.getInvoice());
+                    invoiceRepository.save(reading.getInvoice());
                 }
-            }
-            //zmienic niezatwierdzonym fakturą na ryczałt przy zatwierdzonych zostają kwoty i  pomiary.
-            //Przy zmianie rycząłtu bad stawek dla budynku to przy zatwierdzonym nic sie nie zmienia.
-            if (!invoicesToUpdate.isEmpty()) {
-                invoiceRepository.saveAll(invoicesToUpdate);
             }
             readingRepository.deleteAll(readings);
         }
@@ -160,5 +205,22 @@ public class ApartmentService {
                 ))
                 .collect(Collectors.toList());
     }
+
+
+    @Transactional
+    public List<ApartmentRowDTO> getRentedApartmentsByBuilding(Long buildingId) {
+        return apartmentRepository.findAll().stream()
+                .filter(apartment -> apartment.getBuilding().getId().equals(buildingId))
+                .filter(apartment -> apartment.getTenant() != null)
+                .map(apartment -> new ApartmentRowDTO(
+                        apartment.getId(),
+                        null,
+                        apartment.getNumber()
+                ))
+                .collect(Collectors.toList());
+    }
+
+
+
 
 }

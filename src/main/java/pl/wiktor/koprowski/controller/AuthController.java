@@ -58,7 +58,7 @@ public class AuthController {
 
         Map<String, String> successResponse = new HashMap<>();
         successResponse.put("status", "success");
-        successResponse.put("message", translationService.getTranslation("registration_success", lang)); // Dodany komunikat
+        successResponse.put("message", translationService.getTranslation("registration_success", lang));
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(successResponse);

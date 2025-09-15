@@ -63,6 +63,7 @@ public class AuthService {
             throw new IllegalArgumentException("error_pesel_invalid");
         }
 
+
         User newUser = new User();
         newUser.setFirstName(request.getFirstName());
         newUser.setLastName(request.getLastName());
@@ -98,6 +99,7 @@ public class AuthService {
         String message = translationService.getTranslation("email_activation_body", lang) + "\n" + activationLink;
 
         emailService.sendMail(user.getEmail(), message, subject);
+
     }
 
     @Transactional
@@ -131,6 +133,10 @@ public class AuthService {
 
         if (!user.getRole().equals(credentials.getRole())) {
             throw new IllegalArgumentException("error_role_invalid");
+        }
+
+        if (!user.isEnabled()) {
+            throw new IllegalArgumentException("error_user_disabled");
         }
 
         String token = jwtUtilities.generateToken(user.getUsername(), user.getRole());

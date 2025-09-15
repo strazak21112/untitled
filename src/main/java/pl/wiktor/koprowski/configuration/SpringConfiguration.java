@@ -35,8 +35,8 @@ public class SpringConfiguration implements WebMvcConfigurer {
     @Bean
     public MessageSource messageSource() {
         ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:i18n/messages"); // bez _pl - Spring automatycznie wybierze locale
-        messageSource.setDefaultEncoding("UTF-8"); // KLUCZOWA linijka
+        messageSource.setBasename("classpath:i18n/messages");
+        messageSource.setDefaultEncoding("UTF-8");
         return messageSource;
     }
 

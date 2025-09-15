@@ -28,7 +28,7 @@ public class Building {
     @OneToMany(mappedBy = "building", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<Apartment> apartments = new ArrayList<>();
 
-    @ManyToMany(mappedBy = "managedBuildings", fetch = FetchType.EAGER)
+    @ManyToMany(mappedBy = "managedBuilding", fetch = FetchType.EAGER)
     private List<User> managers = new ArrayList<>();
 
 

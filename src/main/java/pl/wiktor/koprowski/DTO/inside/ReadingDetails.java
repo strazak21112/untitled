@@ -1,13 +1,16 @@
-package pl.wiktor.koprowski.DTO.basic;
+package pl.wiktor.koprowski.DTO.inside;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.*;
-import java.time.LocalDate;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import pl.wiktor.koprowski.DTO.row.ApartmentRowDTO;
 
+import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ReadingDTO {
+public class ReadingDetails {
     private Long id;
     private double coldWaterValue;
     private double hotWaterValue;
@@ -16,6 +19,5 @@ public class ReadingDTO {
     private String date;
     private String billingStartDate;
     private String billingEndDate;
-    private Long apartmentId;
-    private Long invoiceId;
+    private ApartmentRowDTO apartment;
 }

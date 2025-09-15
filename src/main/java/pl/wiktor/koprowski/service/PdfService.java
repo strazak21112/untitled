@@ -1,300 +1,122 @@
 package pl.wiktor.koprowski.service;
 
 import com.itextpdf.text.*;
+import com.itextpdf.text.pdf.BaseFont;
 import com.itextpdf.text.pdf.PdfWriter;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Service;
-import pl.wiktor.koprowski.domain.Invoice;
-import pl.wiktor.koprowski.domain.User;
-import pl.wiktor.koprowski.repository.UserRepository;
+import pl.wiktor.koprowski.DTO.basic.InvoiceDTO;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.time.format.DateTimeFormatter;
 
 @Service
 public class PdfService {
 
-    private final UserRepository userRepository;
+    private final TranslationService translationService;
 
-    public PdfService(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public PdfService(TranslationService translationService) {
+        this.translationService = translationService;
     }
 
-    public void generateInvoicePdf(Invoice invoice, HttpServletResponse response, String lang) {
-        lang = lang.toLowerCase();
+    public void generateInvoicePdf(InvoiceDTO invoice, HttpServletResponse response, String lang) {
+        if (lang == null || lang.isBlank()) {
+            lang = "pl";
+        }
 
-        // Tłumaczenia etykiet
-        String invoiceLabel = switch (lang) {
-            case "en" -> "Invoice";
-            case "de" -> "Rechnung";
-            default -> "Faktura";
-        };
-
-        String userDataLabel = switch (lang) {
-            case "en" -> "User Data";
-            case "de" -> "Benutzerdaten";
-            default -> "Dane użytkownika";
-        };
-
-        String firstNameLabel = switch (lang) {
-            case "en" -> "First Name";
-            case "de" -> "Vorname";
-            default -> "Imię";
-        };
-
-        String lastNameLabel = switch (lang) {
-            case "en" -> "Last Name";
-            case "de" -> "Nachname";
-            default -> "Nazwisko";
-        };
-
-        String emailLabel = switch (lang) {
-            case "en" -> "Email";
-            case "de" -> "E-Mail";
-            default -> "Email";
-        };
-
-        String phoneLabel = switch (lang) {
-            case "en" -> "Phone";
-            case "de" -> "Telefon";
-            default -> "Telefon";
-        };
-
-        String managerDataLabel = switch (lang) {
-            case "en" -> "Manager Data";
-            case "de" -> "Verwalterdaten";
-            default -> "Dane zarządcy";
-        };
-
-        String buildingDataLabel = switch (lang) {
-            case "en" -> "Building & Apartment Data";
-            case "de" -> "Gebäude- und Wohnungsdaten";
-            default -> "Dane budynku i apartamentu";
-        };
-
-        String addressLabel = switch (lang) {
-            case "en" -> "Address";
-            case "de" -> "Adresse";
-            default -> "Adres";
-        };
-
-        String apartmentNumberLabel = switch (lang) {
-            case "en" -> "Apartment Number";
-            case "de" -> "Wohnungsnummer";
-            default -> "Numer apartamentu";
-        };
-
-        String floorNumberLabel = switch (lang) {
-            case "en" -> "Floor Number";
-            case "de" -> "Stockwerk";
-            default -> "Numer piętra";
-        };
-
-        String readingsLabel = switch (lang) {
-            case "en" -> "Meter Readings";
-            case "de" -> "Zählerstände";
-            default -> "Pomiary";
-        };
-
-        String coldWaterLabel = switch (lang) {
-            case "en" -> "Cold Water";
-            case "de" -> "Kaltwasser";
-            default -> "Zimna woda";
-        };
-
-        String hotWaterLabel = switch (lang) {
-            case "en" -> "Hot Water";
-            case "de" -> "Heißwasser";
-            default -> "Ciepła woda";
-        };
-
-        String heatingLabel = switch (lang) {
-            case "en" -> "Heating";
-            case "de" -> "Heizung";
-            default -> "Ogrzewanie";
-        };
-
-        String electricityLabel = switch (lang) {
-            case "en" -> "Electricity";
-            case "de" -> "Elektrizität";
-            default -> "Elektryczność";
-        };
-
-        String measurementDateLabel = switch (lang) {
-            case "en" -> "Measurement Date";
-            case "de" -> "Messdatum";
-            default -> "Data pomiaru";
-        };
-
-        String billingPeriodLabel = switch (lang) {
-            case "en" -> "Billing Period";
-            case "de" -> "Abrechnungszeitraum";
-            default -> "Okres pomiaru";
-        };
-
-        String chargesLabel = switch (lang) {
-            case "en" -> "Charges";
-            case "de" -> "Gebühren";
-            default -> "Opłaty";
-        };
-
-        String rentAmountLabel = switch (lang) {
-            case "en" -> "Rent Amount";
-            case "de" -> "Mietbetrag";
-            default -> "Kwota czynszu";
-        };
-
-        String otherChargesLabel = switch (lang) {
-            case "en" -> "Other Charges";
-            case "de" -> "Sonstige Gebühren";
-            default -> "Inne opłaty";
-        };
-
-
-
-        String totalAmountLabel = switch (lang) {
-            case "en" -> "Total Amount";
-            case "de" -> "Gesamtbetrag";
-            default -> "Łączna kwota";
-        };
-
-        String issueDateLabel = switch (lang) {
-            case "en" -> "Issue Date";
-            case "de" -> "Ausgabedatum";
-            default -> "Data wystawienia";
-        };
-
-
-        String paidLabel = switch (lang) {
-            case "en" -> "Paid"; // Tłumaczenie "Paid" na angielski
-            case "de" -> "Bezahlt"; // Tłumaczenie "Paid" na niemiecki
-            default -> "Opłacona"; // Tłumaczenie "Paid" na polski
-        };
-
-// Tłumaczenie statusu płatności ("Yes"/"No")
-        String paidStatus = switch (lang) {
-            case "en" -> invoice.isPaid() ? "Yes" : "No"; // Tłumaczenie na angielski
-            case "de" -> invoice.isPaid() ? "Ja" : "Nein"; // Tłumaczenie na niemiecki
-            default -> invoice.isPaid() ? "Tak" : "Nie"; // Tłumaczenie na polski
-        };
-
+         var labels = translationService.getTranslations(lang);
 
         try {
-            OutputStream outputStream = response.getOutputStream();
             response.setCharacterEncoding("UTF-8");
             response.setContentType("application/pdf");
-            response.setHeader("Content-Disposition", "inline; filename=" + invoiceLabel + "_" + invoice.getId() + ".pdf");
+            response.setHeader("Content-Disposition", "inline; filename=" +
+                    labels.getOrDefault("invoice", "Faktura") + "_" + invoice.getId() + ".pdf");
 
+            OutputStream outputStream = response.getOutputStream();
             Document document = new Document();
             PdfWriter.getInstance(document, outputStream);
             document.open();
 
-            // Nagłówek faktury
-            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
-            document.add(new Paragraph(invoiceLabel + " #" + invoice.getId(), titleFont));
+            String fontPath = getClass().getResource("/fonts/arial.ttf").toExternalForm();
+            BaseFont baseFont = BaseFont.createFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            Font titleFont = new Font(baseFont, 18, Font.BOLD);
+            Font sectionFont = new Font(baseFont, 12, Font.BOLD);
+            Font normalFont = new Font(baseFont, 12, Font.NORMAL);
+
+             document.add(new Paragraph(labels.getOrDefault("invoice", "Faktura") + " #" + invoice.getId(), titleFont));
             document.add(new Paragraph("\n"));
 
-            // Dane użytkownika
-            document.add(new Paragraph(userDataLabel + ":", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12)));
-            document.add(new Paragraph(firstNameLabel + ": " + invoice.getTenant().getFirstName()));
-            document.add(new Paragraph(lastNameLabel + ": " + invoice.getTenant().getLastName()));
-            document.add(new Paragraph(emailLabel + ": " + invoice.getTenant().getEmail()));
-            document.add(new Paragraph(phoneLabel + ": " + invoice.getTenant().getTelephone()));
-            document.add(new Paragraph("\n"));
+             document.add(new Paragraph(labels.getOrDefault("billingStartDate", "Początek okresu rozliczeniowego") +
+                    ": " + invoice.getBillingStartDate(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("billingEndDate", "Koniec okresu rozliczeniowego") +
+                    ": " + invoice.getBillingEndDate(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("issueDate", "Data wystawienia") +
+                    ": " + invoice.getIssueDate(), normalFont));
 
-             document.add(new Paragraph(buildingDataLabel + ":", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12)));
+             document.add(new Paragraph("\n" + labels.getOrDefault("charges", "Opłaty") + ":", sectionFont));
+            document.add(new Paragraph(labels.getOrDefault("rentAmount", "Wartość wynajmu") +
+                    ": " + invoice.getRentAmount() + " PLN", normalFont));
+            document.add(new Paragraph(labels.getOrDefault("otherCharges", "Inne koszty") +
+                    ": " + invoice.getOtherCharges() + " PLN", normalFont));
+            document.add(new Paragraph(labels.getOrDefault("totalMediaAmount", "Wartość mediów") +
+                    ": " + invoice.getTotalMediaAmount() + " PLN", normalFont));
+            document.add(new Paragraph(labels.getOrDefault("totalAmount", "Suma") +
+                    ": " + invoice.getTotalAmount() + " PLN", normalFont));
+            document.add(new Paragraph(labels.getOrDefault("paid", "Opłacone") +
+                    ": " + (invoice.isPaid() ? labels.getOrDefault("yes", "Tak") : labels.getOrDefault("no", "Nie")), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("confirmed", "Potwierdzone") +
+                    ": " + (invoice.isConfirmed() ? labels.getOrDefault("yes", "Tak") : labels.getOrDefault("no", "Nie")), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("flat", "Ryczałt") +
+                    ": " + (invoice.isFlat() ? labels.getOrDefault("yes", "Tak") : labels.getOrDefault("no", "Nie")), normalFont));
 
-            // Sprawdzenie, czy apartament istnieje
-            if (invoice.getApartment() != null) {
-                // Sprawdzenie, czy budynek istnieje
-                if (invoice.getApartment().getBuilding() != null) {
-                    document.add(new Paragraph(addressLabel + ": " + invoice.getApartment().getBuilding().getAddress()));
-                    document.add(new Paragraph(apartmentNumberLabel + ": " + invoice.getApartment().getNumber()));
-                    document.add(new Paragraph(floorNumberLabel + ": " + invoice.getApartment().getFloor()));
+             document.add(new Paragraph(labels.getOrDefault("rentRatePerM2", "Wynajem/m²") +
+                    ": " + invoice.getInfo().getRentRatePerM2(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("otherChargesPerM2", "Inne koszty/m²") +
+                    ": " + invoice.getInfo().getOtherChargesPerM2(), normalFont));
 
-                } else {
-                    document.add(new Paragraph(addressLabel + ": N/A"));
-                    document.add(new Paragraph(apartmentNumberLabel + ": N/A"));
-                    document.add(new Paragraph(floorNumberLabel + ": N/A"));
-                }
+             document.add(new Paragraph("\n" + (invoice.isFlat() ? labels.getOrDefault("flatRates", "Stawki ryczałtowe") : labels.getOrDefault("readings", "Odczyty")) + ":", sectionFont));
+            if (!invoice.isFlat()) {
+                document.add(new Paragraph(labels.getOrDefault("electricity", "Prąd") + ": " +
+                        invoice.getInfo().getElectricityValue() + " kWh (" + invoice.getInfo().getElectricityRate() + " PLN/kWh)", normalFont));
+                document.add(new Paragraph(labels.getOrDefault("coldWater", "Zimna woda") + ": " +
+                        invoice.getInfo().getColdWaterValue() + " m³ (" + invoice.getInfo().getColdWaterRate() + " PLN/m³)", normalFont));
+                document.add(new Paragraph(labels.getOrDefault("hotWater", "Ciepła woda") + ": " +
+                        invoice.getInfo().getHotWaterValue() + " m³ (" + invoice.getInfo().getHotWaterRate() + " PLN/m³)", normalFont));
+                document.add(new Paragraph(labels.getOrDefault("heating", "Ogrzewanie") + ": " +
+                        invoice.getInfo().getHeatingValue() + " GJ (" + invoice.getInfo().getHeatingRate() + " PLN/GJ)", normalFont));
             } else {
-                document.add(new Paragraph(addressLabel + ": N/A"));
-                document.add(new Paragraph(apartmentNumberLabel + ": N/A"));
-                document.add(new Paragraph(floorNumberLabel + ": N/A"));
+                document.add(new Paragraph(labels.getOrDefault("electricity", "Prąd") + ": " + invoice.getInfo().getFlatElectricityRate(), normalFont));
+                document.add(new Paragraph(labels.getOrDefault("coldWater", "Zimna woda") + ": " + invoice.getInfo().getFlatColdWaterRate(), normalFont));
+                document.add(new Paragraph(labels.getOrDefault("hotWater", "Ciepła woda") + ": " + invoice.getInfo().getFlatHotWaterRate(), normalFont));
+                document.add(new Paragraph(labels.getOrDefault("heating", "Ogrzewanie") + ": " + invoice.getInfo().getFlatHeatingRate(), normalFont));
             }
 
-            document.add(new Paragraph("\n"));
+             document.add(new Paragraph("\n" + labels.getOrDefault("buildingData", "Dane budynku i apartamentu") + ":", sectionFont));
+            document.add(new Paragraph(labels.getOrDefault("address", "Adres budynku") + ": " +
+                    invoice.getInfo().getAddress().getStreet() + " " +
+                    invoice.getInfo().getAddress().getNumber() + ", " +
+                    invoice.getInfo().getAddress().getPostalCode() + " " +
+                    invoice.getInfo().getAddress().getCity(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("apartmentNumber", "Numer mieszkania") + ": " + invoice.getInfo().getApartmentNumber(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("apartmentFloor", "Numer piętra") + ": " + invoice.getInfo().getApartmentFloor(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("apartmentArea", "Powierzchnia mieszkania") + ": " + invoice.getInfo().getApartmentArea() + " m²", normalFont));
 
-            document.add(new Paragraph(managerDataLabel + ":", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12)));
-            if (invoice.getApartment() != null && invoice.getApartment().getBuilding() != null && !invoice.getApartment().getBuilding().getManagers().isEmpty()) {
-                var manager = invoice.getApartment().getBuilding().getManagers().get(0);
-                document.add(new Paragraph(firstNameLabel + ": " + manager.getFirstName()));
-                document.add(new Paragraph(lastNameLabel + ": " + manager.getLastName()));
-                document.add(new Paragraph(emailLabel + ": " + manager.getEmail()));
-            } else {
-                document.add(new Paragraph(firstNameLabel + ": N/A"));
-                document.add(new Paragraph(lastNameLabel + ": N/A"));
-                document.add(new Paragraph(emailLabel + ": N/A"));
-            }
+             document.add(new Paragraph("\n" + labels.getOrDefault("tenant", "Najemca") + ":", sectionFont));
+            document.add(new Paragraph(labels.getOrDefault("firstName", "Imię") + ": " + invoice.getInfo().getTenantFirstName(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("lastName", "Nazwisko") + ": " + invoice.getInfo().getTenantLastName(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("pesel", "PESEL") + ": " + invoice.getInfo().getTenantPesel(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("email", "E-mail") + ": " + invoice.getInfo().getTenantEmail(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("telephone", "Telefon") + ": " + invoice.getInfo().getTenantTelephone(), normalFont));
 
-            document.add(new Paragraph("\n"));
-
-             document.add(new Paragraph(readingsLabel + ":", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12)));
-
-             if (invoice.getReading() != null) {
-                 document.add(new Paragraph(coldWaterLabel + ": " + invoice.getReading().getColdWaterValue() + " m³"));
-                document.add(new Paragraph(hotWaterLabel + ": " + invoice.getReading().getHotWaterValue() + " m³"));
-                document.add(new Paragraph(heatingLabel + ": " + invoice.getReading().getHeatingValue() + " GJ"));
-                document.add(new Paragraph(electricityLabel + ": " + invoice.getReading().getElectricityValue() + " kWh"));
-
-                 String measurementDate =invoice.getReading().getDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
-
-                document.add(new Paragraph(measurementDateLabel + ": " + measurementDate));
-
-                 String billingPeriod =  invoice.getReading().getBillingStartDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) + "/"
-                        + invoice.getReading().getBillingEndDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
-
-                document.add(new Paragraph(billingPeriodLabel + ": " + billingPeriod));
-            } else {
-                document.add(new Paragraph(coldWaterLabel + ": N/A"));
-                document.add(new Paragraph(hotWaterLabel + ": N/A"));
-                document.add(new Paragraph(heatingLabel + ": N/A"));
-                document.add(new Paragraph(electricityLabel + ": N/A"));
-                document.add(new Paragraph(measurementDateLabel + ": N/A"));
-                document.add(new Paragraph(billingPeriodLabel + ": N/A"));
-            }
-
-            document.add(new Paragraph("\n"));
-
-
-
-           document.add(new Paragraph(chargesLabel + ":", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12)));
-
-
-            document.add(new Paragraph(rentAmountLabel + ": " + invoice.getRentAmount() + " PLN"));
-            document.add(new Paragraph(otherChargesLabel + ": " + invoice.getOtherCharges() + " PLN"));
-            String mediaAmountLabel = invoice.getReading() != null ? switch (lang) {
-                case "en" -> "Media Charges"; // Opłata za media w języku angielskim
-                case "de" -> "Mediengebühren"; // Opłata za media w języku niemieckim
-                default -> "Opłata za media";  // Opłata za media w języku polskim
-            } : switch (lang) {
-                case "en" -> "Media Lump Sum";  // Ryczałt za media w języku angielskim
-                case "de" -> "Pauschalbetrag für Medien";  // Ryczałt za media w języku niemieckim
-                default -> "Ryczałt za media";  // Ryczałt za media w języku polskim
-            };
-            document.add(new Paragraph(mediaAmountLabel + ": " + invoice.getTotalMediaAmount() + " PLN"));
-
-            document.add(new Paragraph(totalAmountLabel + ": " + invoice.getTotalAmount() + " PLN"));
-            document.add(new Paragraph(issueDateLabel + ": " + invoice.getIssueDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))));
-            document.add(new Paragraph(billingPeriodLabel + ": " + invoice.getBillingStartDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
-                    + " - " + invoice.getBillingEndDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))));
-            document.add(new Paragraph(paidLabel + ": " + paidStatus));
-            document.add(new Paragraph("\n"));
-
+             document.add(new Paragraph("\n" + labels.getOrDefault("manager", "Zarządca") + ":", sectionFont));
+            document.add(new Paragraph(labels.getOrDefault("firstName", "Imię") + ": " + invoice.getInfo().getManagerFirstName(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("lastName", "Nazwisko") + ": " + invoice.getInfo().getManagerLastName(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("pesel", "PESEL") + ": " + invoice.getInfo().getManagerPesel(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("email", "E-mail") + ": " + invoice.getInfo().getManagerEmail(), normalFont));
+            document.add(new Paragraph(labels.getOrDefault("telephone", "Telefon") + ": " + invoice.getInfo().getManagerTelephone(), normalFont));
 
             document.close();
-            outputStream.close();
+
         } catch (IOException | DocumentException e) {
             e.printStackTrace();
         }

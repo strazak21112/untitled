@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new ErrorResponse(translatedMessage));
+                .body(new ErrorResponse("error", translatedMessage));
     }
 
     @ExceptionHandler(RuntimeException.class)
@@ -46,6 +46,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new ErrorResponse(translatedMessage));
+                .body(new ErrorResponse("error", translatedMessage));
     }
 }

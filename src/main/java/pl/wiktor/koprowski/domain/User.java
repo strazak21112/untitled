@@ -45,8 +45,8 @@ public class User implements Serializable, UserDetails {
 
     private String email;
 
+    @OneToOne(mappedBy = "user")
     @JsonManagedReference
-    @OneToOne(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)
     private Pesel pesel;
 
 
@@ -70,7 +70,7 @@ public class User implements Serializable, UserDetails {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "building_id")
     )
-    private List<Building> managedBuildings = new ArrayList<>();
+    private List<Building> managedBuilding = new ArrayList<>();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

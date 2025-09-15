@@ -92,5 +92,36 @@ public class BuildingController {
         response.put("data", buildingInfos);
         return ResponseEntity.ok(response);
     }
+    @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> getAllBuildings(
+            @RequestParam(defaultValue = "pl") String lang) {
+
+        List<BuildingInfoDTO> buildings = buildingService.getAllBuildings();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("data", buildings);
+
+        return ResponseEntity.ok(response);
+    }
+    @GetMapping(value = "/manager", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    public ResponseEntity<Map<String, Object>> getBuildingsByManagerEmail(
+            @RequestParam("email") String email,
+            @RequestParam(defaultValue = "pl") String lang) {
+
+        List<BuildingInfoDTO> buildings = buildingService.getBuildingsByManagerEmail(email);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("data", buildings);
+
+
+
+        return ResponseEntity.ok(response);
+    }
+
+
 
 }

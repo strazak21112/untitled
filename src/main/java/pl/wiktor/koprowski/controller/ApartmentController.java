@@ -108,5 +108,19 @@ public class ApartmentController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping(value = "/rented/by-building/{buildingId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    public ResponseEntity<Map<String, Object>> getRentedApartmentsByBuilding(
+            @PathVariable Long buildingId,
+            @RequestParam(defaultValue = "pl") String lang) {
+
+        List<ApartmentRowDTO> rentedApartments = apartmentService.getRentedApartmentsByBuilding(buildingId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("data", rentedApartments);
+
+        return ResponseEntity.ok(response);
+    }
 
 }

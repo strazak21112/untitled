@@ -13,12 +13,15 @@ public class EmailService{
     private JavaMailSender javaMailSender;
 
     public void sendMail(String receiver, String content, String subject) throws MailException {
+
+
         SimpleMailMessage mail = new SimpleMailMessage();
-        mail.setFrom("EmailAuthor-SpringApplication");
+        mail.setFrom("dan5255555@gmail.com");
         mail.setTo(receiver);
         mail.setSubject(subject);
         mail.setText(content);
-        javaMailSender.send(mail);
+         javaMailSender.send(mail);
+
     }
 
 }

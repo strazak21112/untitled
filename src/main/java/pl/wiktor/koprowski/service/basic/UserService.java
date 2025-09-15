@@ -5,7 +5,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.wiktor.koprowski.DTO.auth.ChangePasswordRequest;
 import pl.wiktor.koprowski.DTO.auth.RegisterRequest;
+import pl.wiktor.koprowski.DTO.auth.UpdateProfileRequest;
+import pl.wiktor.koprowski.DTO.auth.UserProfileDTO;
 import pl.wiktor.koprowski.DTO.basic.ApartmentDTO;
 import pl.wiktor.koprowski.DTO.basic.UserDTO;
 import pl.wiktor.koprowski.DTO.inside.BuildingInfoDTO;
@@ -85,10 +88,12 @@ public class UserService {
         newManager.setEnabled(false);
         newManager.setRole("MANAGER");
 
+        Pesel pesel = new Pesel();
+        pesel.setPesel(registerRequest.getPesel());
+        pesel.linkUser(newManager);
         newManager = userRepository.save(newManager);
-
-        Pesel pesel = new Pesel(registerRequest.getPesel(), newManager);
         peselRepository.save(pesel);
+
 
         String activationTokenValue = UUID.randomUUID().toString();
         while (activationTokenRepository.existsByToken(activationTokenValue)) {
@@ -103,8 +108,8 @@ public class UserService {
         activationTokenRepository.save(token);
 
         String activationLink = "http://localhost:3000/activate?token=" + activationTokenValue;
-        String subject = translationService.getTranslation("email_activation_subject",lang);
-        String message = translationService.getTranslation("email_activation_body",lang) + "\n" + activationLink;
+        String subject = translationService.getTranslation("email_activation_subject", lang);
+        String message = translationService.getTranslation("email_activation_body", lang) + "\n" + activationLink;
 
         emailService.sendMail(newManager.getEmail(), message, subject);
     }
@@ -161,23 +166,27 @@ public class UserService {
                     currentApartment.setTenant(null);
                     user.setApartment(null);
                     apartmentRepository.save(currentApartment);
+
+                    Set<Invoice> invoices = invoiceRepository.findByTenant(user);
+                    for (Invoice invoice : invoices) {
+                        if (!invoice.isConfirmed()) {
+                            invoiceRepository.delete(invoice);
+                        }
+                    }
                 }
             } else {
                 if (currentApartment == null) {
-
                     Apartment newApartment = apartmentRepository.findById(newApartmentId)
                             .orElseThrow(() -> new IllegalArgumentException("error_apartment_not_found"));
-
                     newApartment.setTenant(user);
                     user.setApartment(newApartment);
                     apartmentRepository.save(newApartment);
                 }
             }
-        }
-        else if ("MANAGER".equals(user.getRole())) {
-            List<Building> currentBuildings = new ArrayList<>(user.getManagedBuildings());
+        } else if ("MANAGER".equals(user.getRole())) {
+            List<Building> currentBuildings = new ArrayList<>(user.getManagedBuilding());
 
-             List<Long> newBuildingIds = userDTO.getManagedBuilding() != null
+            List<Long> newBuildingIds = userDTO.getManagedBuilding() != null
                     ? userDTO.getManagedBuilding().stream()
                     .map(BuildingInfoDTO::getId)
                     .filter(Objects::nonNull)
@@ -187,35 +196,44 @@ public class UserService {
 
             List<Building> newBuildings = buildingRepository.findAllById(newBuildingIds);
 
-             if (newBuildings.size() != newBuildingIds.size()) {
+            if (newBuildings.size() != newBuildingIds.size()) {
                 throw new IllegalArgumentException("error_some_buildings_not_found");
             }
 
-             for (Building oldBuilding : currentBuildings) {
+            for (Building oldBuilding : currentBuildings) {
                 if (!newBuildings.contains(oldBuilding)) {
                     if (oldBuilding.getManagers().size() == 1 && oldBuilding.getManagers().contains(user)) {
                         throw new IllegalArgumentException("error_building_needs_at_least_one_manager");
                     }
+
                     oldBuilding.getManagers().remove(user);
                     buildingRepository.save(oldBuilding);
+
+                    Set<Invoice> invoicesToDelete = invoiceRepository.findByInfo_ManagerEmail(user.getEmail()).stream()
+                            .filter(invoice -> !invoice.isConfirmed()
+                                    && invoice.getApartment() != null
+                                    && invoice.getApartment().getBuilding().getManagers().stream()
+                                    .noneMatch(m -> m.getId().equals(user.getId())))
+                            .collect(Collectors.toSet());
+
+                    invoiceRepository.deleteAll(invoicesToDelete);
                 }
             }
 
-             for (Building newBuilding : newBuildings) {
+
+            for (Building newBuilding : newBuildings) {
                 if (!currentBuildings.contains(newBuilding)) {
                     newBuilding.getManagers().add(user);
                     buildingRepository.save(newBuilding);
                 }
             }
 
-            user.setManagedBuildings(newBuildings);
+            user.setManagedBuilding(newBuildings);
         }
 
 
         userRepository.save(user);
     }
-
-
 
 
     @Transactional(readOnly = true)
@@ -254,8 +272,8 @@ public class UserService {
             dto.setApartment(apartmentDTO);
         }
 
-        if (user.getManagedBuildings() != null && !user.getManagedBuildings().isEmpty()) {
-            List<BuildingInfoDTO> buildingDTOs = user.getManagedBuildings().stream()
+        if (user.getManagedBuilding() != null && !user.getManagedBuilding().isEmpty()) {
+            List<BuildingInfoDTO> buildingDTOs = user.getManagedBuilding().stream()
                     .map(building -> {
                         BuildingInfoDTO bDTO = new BuildingInfoDTO();
                         bDTO.setId(building.getId());
@@ -287,34 +305,159 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("error_user_not_found"));
 
-        for (Building building : user.getManagedBuildings()) {
+        for (Building building : user.getManagedBuilding()) {
             if (building.getManagers().size() == 1 && building.getManagers().contains(user)) {
                 throw new IllegalArgumentException("error_building_needs_at_least_one_manager");
             }
         }
+
+        if (user.getPesel() != null) {
+            Pesel pesel = user.getPesel();
+
+             user.setPesel(null);
+            pesel.setUser(null);
+
+             peselRepository.delete(pesel);
+        }
+        List<ActivationToken> tokens = activationTokenRepository.findByUser(user);
+        activationTokenRepository.deleteAll(tokens);
+
 
         if (user.getApartment() != null) {
             user.getApartment().setTenant(null);
             apartmentRepository.save(user.getApartment());
         }
 
-        for (Building building : user.getManagedBuildings()) {
+        for (Building building : user.getManagedBuilding()) {
             building.getManagers().remove(user);
             buildingRepository.save(building);
         }
 
-        Set<Invoice> invoices = invoiceRepository.findByTenant(user);
-        for (Invoice invoice : invoices) {
-            invoice.setTenant(null);
-            invoiceRepository.save(invoice);
-        }
-
-        if (user.getPesel() != null) {
-            user.setPesel(null);
+        if ("USER".equalsIgnoreCase(user.getRole())) {
+            Set<Invoice> invoices = invoiceRepository.findByTenant(user);
+            invoiceRepository.deleteAll(invoices);
+        } else if ("MANAGER".equalsIgnoreCase(user.getRole())) {
+            Set<Invoice> invoices = invoiceRepository.findByInfo_ManagerEmail(user.getEmail());
+            for (Invoice invoice : invoices) {
+                if (!invoice.isConfirmed()) {
+                    invoiceRepository.delete(invoice);
+                }
+            }
         }
 
         userRepository.delete(user);
     }
+
+
+
+    @Transactional
+    public void changePassword(ChangePasswordRequest request, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("error_user_not_found"));
+
+         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("error_old_password_invalid");
+        }
+
+         String newPassword = request.getNewPassword();
+        if (newPassword == null || !newPassword.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&]).{12,}$")) {
+            throw new IllegalArgumentException("error_new_password_invalid");
+        }
+
+         user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+
+
+
+    @Transactional
+    public void updateProfile(UpdateProfileRequest request, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("error_user_not_found"));
+
+        if (request.getFirstName() != null && !request.getFirstName().isBlank()) {
+            user.setFirstName(request.getFirstName());
+        }
+
+        if (request.getLastName() != null && !request.getLastName().isBlank()) {
+            user.setLastName(request.getLastName());
+        }
+
+        if (request.getTelephone() != null && !request.getTelephone().isBlank()) {
+             if (!request.getTelephone().matches("^\\d{9}$")) {
+                throw new IllegalArgumentException("error_phone_invalid");
+            }
+            user.setTelephone(request.getTelephone());
+        }
+
+        userRepository.save(user);
+    }
+
+
+    @Transactional(readOnly = true)
+    public UserProfileDTO getUserProfileByEmail(String email) {
+         User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("error_user_not_found"));
+
+         return new UserProfileDTO(
+                user.getFirstName(),
+                user.getLastName(),
+                user.getTelephone()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public UserDTO getUserDetailsByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("error_user_not_found"));
+
+        UserDTO dto = new UserDTO();
+        dto.setId(user.getId());
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
+        dto.setTelephone(user.getTelephone());
+        dto.setEmail(user.getEmail());
+        dto.setRole(user.getRole());
+        dto.setEnabled(user.isEnabled());
+
+        if (user.getPesel() != null) {
+            dto.setPesel(user.getPesel().getPesel());
+        }
+
+        if (user.getApartment() != null) {
+            Apartment apartment = user.getApartment();
+            ApartmentDTO apartmentDTO = new ApartmentDTO();
+            apartmentDTO.setId(apartment.getId());
+            apartmentDTO.setNumber(apartment.getNumber());
+            apartmentDTO.setArea(apartment.getArea());
+            apartmentDTO.setFloor(apartment.getFloor());
+
+            Building building = apartment.getBuilding();
+
+            BuildingInfoDTO buildingInfoDTO = new BuildingInfoDTO();
+            buildingInfoDTO.setId(building.getId());
+            buildingInfoDTO.setAddress(building.getAddress());
+            apartmentDTO.setBuildingInfo(buildingInfoDTO);
+
+            dto.setApartment(apartmentDTO);
+        }
+
+        if (user.getManagedBuilding() != null && !user.getManagedBuilding().isEmpty()) {
+            List<BuildingInfoDTO> buildingDTOs = user.getManagedBuilding().stream()
+                    .map(building -> {
+                        BuildingInfoDTO bDTO = new BuildingInfoDTO();
+                        bDTO.setId(building.getId());
+                        bDTO.setAddress(building.getAddress());
+                        return bDTO;
+                    })
+                    .collect(Collectors.toList());
+            dto.setManagedBuilding(buildingDTOs);
+        }
+
+        return dto;
+    }
+
 
 
 }

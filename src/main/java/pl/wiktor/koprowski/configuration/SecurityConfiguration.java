@@ -53,17 +53,14 @@ public class SecurityConfiguration {
                 .requestMatchers("/translations").permitAll()
                 .anyRequest().authenticated();
 
-        // Dodanie filtra kodowania
-        CharacterEncodingFilter encodingFilter = new CharacterEncodingFilter();
+         CharacterEncodingFilter encodingFilter = new CharacterEncodingFilter();
         encodingFilter.setEncoding("UTF-8");
         encodingFilter.setForceEncoding(true);
         http.addFilterBefore(encodingFilter, UsernamePasswordAuthenticationFilter.class);
 
-        // Dodanie filtra JWT
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        // Stosowanie konfiguracji CORS
-        http.cors().configurationSource(corsConfigurationSource());
+         http.cors().configurationSource(corsConfigurationSource());
 
         return http.build();
     }

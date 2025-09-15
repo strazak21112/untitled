@@ -14,7 +14,7 @@ public class InvoiceInfo {
 
     private Address address;
 
-     private double electricityRate;
+    private double electricityRate;
     private double coldWaterRate;
     private double hotWaterRate;
     private double heatingRate;
@@ -31,7 +31,7 @@ public class InvoiceInfo {
     private int apartmentFloor;
     private double apartmentArea;
 
-     private String tenantFirstName;
+    private String tenantFirstName;
     private String tenantLastName;
     private String tenantPesel;
     private String tenantEmail;
@@ -47,5 +47,7 @@ public class InvoiceInfo {
     private double hotWaterValue;
     private double heatingValue;
     private double electricityValue;
+
+
 
 }

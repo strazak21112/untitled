@@ -59,4 +59,9 @@ public class Invoice {
     boolean confirmed = false;
     @Embedded
     InvoiceInfo info;
+
+    @Column(nullable = false)
+    boolean flat;
+
+
 }

@@ -1,9 +1,11 @@
 package pl.wiktor.koprowski.DTO.basic;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.*;
+import pl.wiktor.koprowski.domain.InvoiceInfo;
 
 import java.time.LocalDate;
 
@@ -11,6 +13,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InvoiceDTO {
+    private Long id;
 
     @Positive(message = "Rent amount must be greater than 0")
     @DecimalMin(value = "0.01", message = "Rent amount must be greater than 0")
@@ -30,7 +33,8 @@ public class InvoiceDTO {
 
 
     @NotNull(message = "Issue date cannot be null")
-    private LocalDate issueDate;
+
+    private String issueDate;
 
     @NotNull(message = "User ID cannot be null")
     private Long userId;
@@ -43,10 +47,18 @@ public class InvoiceDTO {
     private Long apartmentId;
 
     @NotNull(message = "Billing start date cannot be null")
-    private LocalDate billingStartDate;
+
+    private String billingStartDate;
 
     @NotNull(message = "Billing end date cannot be null")
-    private LocalDate billingEndDate;
+
+    private String billingEndDate;
 
     private boolean confirmed;
+
+    boolean flat;
+
+    InvoiceInfo info;
+
+
 }

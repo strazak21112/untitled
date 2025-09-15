@@ -21,14 +21,14 @@ import java.util.function.Function;
 public class JwtUtilities {
 
     private final String secret = "9df8505bb4eb7833d0f07cebec765d065344850a4548a5f8c3a9ffea5c01e6bd";
-    private final Long jwtExpiration = 36000000L; // 10 godzin
+    private final Long jwtExpiration = 36000000L;
 
-    // Generowanie klucza do podpisywania JWT
+
     private SecretKey generateSigningKey() {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
     }
 
-    // Generowanie tokenu JWT
+
     public String generateToken(String email, String role) {
         Instant now = Instant.now();
         Instant expirationTime = now.plus(jwtExpiration, ChronoUnit.MILLIS);
@@ -43,7 +43,7 @@ public class JwtUtilities {
                 .compact();
     }
 
-    // Walidacja tokenu
+
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder()
@@ -65,7 +65,7 @@ public class JwtUtilities {
         return false;
     }
 
-    // Ekstrakcja claims z tokenu
+
     public Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(generateSigningKey())
@@ -74,33 +74,33 @@ public class JwtUtilities {
                 .getBody();
     }
 
-    // Pobranie konkretnej wartości z claims
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
-    // Pobranie emaila z tokenu
+
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
-    // Pobranie roli użytkownika z tokenu
+
     public String extractRole(String token) {
         return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
-    // Pobranie daty wygaśnięcia tokenu
+
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    // Sprawdzenie, czy token wygasł
+
     public boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
-    // Pobranie tokenu z nagłówka HTTP
+
     public String getToken(HttpServletRequest request) {
         final String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
@@ -109,7 +109,7 @@ public class JwtUtilities {
         return null;
     }
 
-    // Walidacja tokenu na podstawie użytkownika
+
     public boolean validateToken(String token, UserDetails userDetails) {
         final String email = extractEmail(token);
         return email.equals(userDetails.getUsername()) && !isTokenExpired(token);

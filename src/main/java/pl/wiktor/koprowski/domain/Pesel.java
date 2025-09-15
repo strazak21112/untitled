@@ -20,9 +20,9 @@ public class Pesel {
 	@Column(nullable = false, unique = true)
 	private String pesel;
 
-	@JsonIgnore
 	@OneToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "user_id", nullable = false, unique = true)
+	@JsonBackReference
 	private User user;
 
 
