@@ -30,8 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
-        // Uzyskujemy UserService przez ApplicationContext
-        UserService userService = applicationContext.getBean(UserService.class);
+         UserService userService = applicationContext.getBean(UserService.class);
 
         String token = jwtUtilities.getToken(request);
 
